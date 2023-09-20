@@ -1,0 +1,7 @@
+.cards {
+    display: block;
+    flex-direction: row;
+    list-style: none;
+    text-align: center;
+}
+

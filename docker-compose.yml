@@ -1,0 +1,101 @@
+version: "3.4"
+
+services:
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+    image: ${IMAGES_PREFIX:-}app-php
+    restart: unless-stopped
+    volumes:
+      - php_socket:/var/run/php
+    environment:
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      TRUSTED_HOSTS: ^${SERVER_NAME:-example\.com|localhost}|caddy$$
+      # The two next lines can be removed after initial installation
+      SYMFONY_VERSION: ${SYMFONY_VERSION:-}
+      STABILITY: ${STABILITY:-stable}
+      # Run "composer require symfony/orm-pack" to install and configure Doctrine ORM
+      DATABASE_URL: mysql://card:card@mysql:5432/card?serverVersion=15&charset=utf8mb4
+      # Run "composer require symfony/mercure-bundle" to install and configure the Mercure integration
+      MERCURE_URL: ${CADDY_MERCURE_URL:-http://caddy/.well-known/mercure}
+      MERCURE_PUBLIC_URL: https://${SERVER_NAME:-localhost}/.well-known/mercure
+      MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+    depends_on:
+      - mysql
+    networks:
+      - db
+
+  caddy:
+    container_name: caddy
+    build:
+      context: ./backend
+    image: ${IMAGES_PREFIX:-}app-caddy
+    depends_on:
+      backend:
+        condition: service_healthy
+        restart: true
+    environment:
+      SERVER_NAME: ${SERVER_NAME:-localhost}, caddy:80
+      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+    restart: unless-stopped
+    volumes:
+      - php_socket:/var/run/php
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      # HTTP
+      - target: 80
+        published: ${HTTP_PORT:-80}
+        protocol: tcp
+      # HTTPS
+      - target: 443
+        published: ${HTTPS_PORT:-443}
+        protocol: tcp
+      # HTTP/3
+      - target: 443
+        published: ${HTTP3_PORT:-443}
+        protocol: udp
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+    # Set envrionment variables based on the .env file
+    env_file:
+      - .env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - 3000:3000
+    command: npm run dev
+    links:
+      - backend
+
+  mysql:
+    image: mysql:8.0
+    command: mysqld --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: card
+      MYSQL_ROOT_PASSWORD: card
+      MYSQL_USER: card
+      MYSQL_PASSWORD: card
+    ports:
+      - '3306:3306'
+    volumes:
+      - ./db/data:/var/lib/mysql:rw
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - db
+
+networks:
+  db:
+    driver: bridge
+
+volumes:
+  php_socket:
+  caddy_data:
+  caddy_config:

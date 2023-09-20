@@ -1,0 +1,36 @@
+.DS_Store
+.idea/
+###> symfony/framework-bundle ###
+/backend/.env.local
+/backend/.env.local.php
+/backend/.env.*.local
+/backend/config/secrets/prod/prod.decrypt.private.php
+/backend/public/bundles/
+/backend/var/
+/backend/vendor/
+/backend/.phpunit.result.cache
+/backend/phpunit.xml
+/phpunit.xml
+###< symfony/framework-bundle ###
+
+###> NextJs ###
+/frontend/node_modules/
+/frontend/.next/
+/frontend/.pnp
+/frontend/.pnp.js
+/frontend/coverage
+/frontend/out/
+/frontend/build
+/frontend/*.pem
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+/frontend/.env*.local
+/frontend/.vercel
+/frontend/next-env.d.ts
+/frontend/*.tsbuildinfo
+###< NextJs ###
+
+###> DB ###
+/db/data/
+###< DB ###
